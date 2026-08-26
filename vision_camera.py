@@ -50,7 +50,6 @@ class HandObservation:
     label: str
     box: tuple
     image_landmarks: list
-    world_landmarks: list
 
 
 @dataclass
@@ -120,9 +119,7 @@ def point_in_ignored_zone(point, zones, width, height):
 def hand_observations(result, width, height):
     """Convert MediaPipe output to labeled hand observations."""
     observations = []
-    for image_hand, world_hand, handedness in zip(
-        result.hand_landmarks, result.hand_world_landmarks, result.handedness
-    ):
+    for image_hand, handedness in zip(result.hand_landmarks, result.handedness):
         points = [(landmark.x * width, landmark.y * height) for landmark in image_hand]
         x_values, y_values = zip(*points)
         observations.append(
@@ -130,7 +127,6 @@ def hand_observations(result, width, height):
                 handedness[0].category_name if handedness else "Hand",
                 (min(x_values), min(y_values), max(x_values), max(y_values)),
                 image_hand,
-                world_hand,
             )
         )
     return observations
@@ -386,7 +382,6 @@ def run(opt):
                         draw_hand(
                             frame,
                             hand.image_landmarks,
-                            hand.world_landmarks,
                             hand.label,
                             HAND_COLORS[index % len(HAND_COLORS)],
                         )

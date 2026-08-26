@@ -63,9 +63,9 @@ def model_path(path=None):
 
 
 def angle(a, b, c):
-    """Return the angle ABC in degrees for three 3D landmarks."""
-    ba = (a.x - b.x, a.y - b.y, a.z - b.z)
-    bc = (c.x - b.x, c.y - b.y, c.z - b.z)
+    """Return the angle ABC in degrees in the camera plane."""
+    ba = (a.x - b.x, a.y - b.y)
+    bc = (c.x - b.x, c.y - b.y)
     denominator = math.sqrt(sum(value * value for value in ba) * sum(value * value for value in bc))
     if denominator == 0:
         return 0.0
@@ -74,8 +74,8 @@ def angle(a, b, c):
 
 
 def distance(a, b):
-    """Return the Euclidean distance between two 3D landmarks."""
-    return math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2)
+    """Return the planar distance between two landmarks."""
+    return math.hypot(a.x - b.x, a.y - b.y)
 
 
 def extended_fingers(landmarks):
@@ -83,19 +83,23 @@ def extended_fingers(landmarks):
     wrist = landmarks[0]
     states = []
     for finger_index, (mcp, pip, dip, tip) in enumerate(FINGER_JOINTS):
-        joint = pip if finger_index else dip
-        base = mcp if finger_index else pip
-        straight = angle(landmarks[base], landmarks[joint], landmarks[tip]) > 155
-        away_from_palm = distance(wrist, landmarks[tip]) > distance(wrist, landmarks[joint]) * 1.08
+        if finger_index == 0:
+            straight = angle(landmarks[pip], landmarks[dip], landmarks[tip]) > 125
+            away_from_palm = distance(wrist, landmarks[tip]) > distance(wrist, landmarks[dip]) * 1.03
+        else:
+            proximal_angle = angle(landmarks[mcp], landmarks[pip], landmarks[dip])
+            distal_angle = angle(landmarks[pip], landmarks[dip], landmarks[tip])
+            straight = proximal_angle > 120 and distal_angle > 120 and (proximal_angle + distal_angle) / 2 > 135
+            away_from_palm = distance(wrist, landmarks[tip]) > distance(wrist, landmarks[pip]) * 1.05
         states.append(straight and away_from_palm)
     return states
 
 
-def draw_hand(frame, image_landmarks, world_landmarks, handedness, color):
+def draw_hand(frame, image_landmarks, handedness, color):
     """Draw one hand skeleton, fingertip states, bounding box, and count."""
     height, width = frame.shape[:2]
     points = [(int(landmark.x * width), int(landmark.y * height)) for landmark in image_landmarks]
-    states = extended_fingers(world_landmarks)
+    states = extended_fingers(image_landmarks)
 
     for connection in mp.tasks.vision.HandLandmarksConnections.HAND_CONNECTIONS:
         cv2.line(frame, points[connection.start], points[connection.end], color, 3, cv2.LINE_AA)
@@ -164,11 +168,9 @@ def run(opt):
                 result = landmarker.detect_for_video(media_image, timestamp_ms)
 
                 total = 0
-                for index, (image_hand, world_hand, handedness) in enumerate(
-                    zip(result.hand_landmarks, result.hand_world_landmarks, result.handedness)
-                ):
+                for index, (image_hand, handedness) in enumerate(zip(result.hand_landmarks, result.handedness)):
                     label = handedness[0].category_name if handedness else "Hand"
-                    total += draw_hand(frame, image_hand, world_hand, label, HAND_COLORS[index % len(HAND_COLORS)])
+                    total += draw_hand(frame, image_hand, label, HAND_COLORS[index % len(HAND_COLORS)])
 
                 cv2.rectangle(frame, (18, 18), (330, 84), (20, 20, 20), -1)
                 cv2.putText(
