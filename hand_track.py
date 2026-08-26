@@ -17,7 +17,7 @@ except ImportError as error:
     raise SystemExit("MediaPipe is required. Install it with: python -m pip install -e '.[hands]'") from error
 
 MODEL_URL = (
-    "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/"
+    "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/"
     "hand_landmarker.task"
 )
 FINGER_JOINTS = ((1, 2, 3, 4), (5, 6, 7, 8), (9, 10, 11, 12), (13, 14, 15, 16), (17, 18, 19, 20))
@@ -45,7 +45,7 @@ def model_path(path=None):
         return path
 
     cache_root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "yolov5"
-    cached_model = cache_root / "hand_landmarker.task"
+    cached_model = cache_root / "hand_landmarker-v1.task"
     if cached_model.is_file():
         return cached_model
 
