@@ -78,6 +78,22 @@ pip install -r requirements.txt
 
 </details>
 
+<details>
+<summary>Live hand landmarks and finger counting</summary>
+
+Install the optional MediaPipe dependency, then start the MacBook camera preview. The official hand landmark model is
+downloaded once and cached locally on first use.
+
+```bash
+python -m pip install -e '.[hands]'
+python hand_track.py --source 0
+```
+
+The preview tracks up to two hands, draws their 21 landmarks, marks raised fingertips in green, and shows per-hand and
+total raised-finger counts. Press `q` to quit. If macOS selects a different camera, try `--source 1`.
+
+</details>
+
 <details open>
 <summary>Inference with PyTorch Hub</summary>
 
