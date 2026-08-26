@@ -128,7 +128,7 @@ def hand_observations(result, width, height, mirrored):
         points = [(landmark.x * width, landmark.y * height) for landmark in image_hand]
         x_values, y_values = zip(*points)
         label = handedness[0].category_name if handedness else "Hand"
-        if not mirrored and label in {"Left", "Right"}:
+        if mirrored and label in {"Left", "Right"}:
             label = "Right" if label == "Left" else "Left"
         observations.append(
             HandObservation(
