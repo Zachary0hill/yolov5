@@ -291,16 +291,14 @@ def draw_ignore_zones(frame, zones):
         cv2.putText(frame, "IGNORE", (start[0] + 6, start[1] + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (180, 180, 180), 2)
 
 
-def draw_hud(frame, detections, fps, device, show_masks, show_hands, phone_filter):
+def draw_hud(frame, fps, device, show_masks, show_hands, phone_filter):
     """Draw a compact status panel and keyboard help."""
-    counts = {name: sum(detection.name == name for detection in detections) for name in PROMPTS}
     lines = [
         f"Vision Camera  |  {fps:.1f} FPS  |  {device}",
-        f"People {counts['person']}   Phones {counts['cell phone']}   Headphones {counts['over-ear headphones']}",
         f"Masks {'ON' if show_masks else 'OFF'}   Hands {'ON' if show_hands else 'OFF'}   Held-phone filter {'ON' if phone_filter else 'OFF'}",
     ]
     overlay = frame.copy()
-    cv2.rectangle(overlay, (15, 15), (640, 116), (15, 15, 15), -1)
+    cv2.rectangle(overlay, (15, 15), (640, 86), (15, 15, 15), -1)
     frame[:] = cv2.addWeighted(overlay, 0.78, frame, 0.22, 0)
     for index, line in enumerate(lines):
         cv2.putText(frame, line, (30, 43 + index * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (245, 245, 245), 2, cv2.LINE_AA)
@@ -398,7 +396,7 @@ def run(opt):
                 instantaneous_fps = 1 / max(current_time - previous_time, 1e-6)
                 fps = instantaneous_fps if fps == 0 else fps * 0.9 + instantaneous_fps * 0.1
                 previous_time = current_time
-                draw_hud(frame, detections, fps, device, show_masks, show_hands, phone_filter)
+                draw_hud(frame, fps, device, show_masks, show_hands, phone_filter)
                 cv2.imshow(window, frame)
 
                 key = cv2.waitKey(1) & 0xFF
