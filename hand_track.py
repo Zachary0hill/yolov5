@@ -145,6 +145,7 @@ def run(opt):
     camera.set(cv2.CAP_PROP_FRAME_WIDTH, opt.width)
     camera.set(cv2.CAP_PROP_FRAME_HEIGHT, opt.height)
     if not camera.isOpened():
+        camera.release()
         raise RuntimeError(f"Could not open camera {opt.source}. Check macOS camera permissions or try --source 1.")
 
     timestamp_ms = 0
