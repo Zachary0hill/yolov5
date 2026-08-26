@@ -100,6 +100,9 @@ total raised-finger counts. Press `q` to quit. If macOS selects a different came
 Run the unified camera preview with fixed class colors, YOLOE segmentation, ByteTrack IDs, MediaPipe hand landmarks,
 finger counts, class-specific confidence thresholds, and hand/object relationships:
 
+See the [Vision Camera Intelligence Enhancement Plan](VISION_CAMERA_ENHANCEMENT_PLAN.md) for the phased roadmap covering
+tolerance, multi-object and multi-hand identity, relationships, motion events, gestures, and custom model improvement.
+
 ```bash
 python -m pip install --upgrade ultralytics "mediapipe>=0.10.14,<1.0" "lap>=0.5.12"
 python vision_camera.py --source 0
