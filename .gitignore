@@ -53,6 +53,7 @@ VOC/
 *.mlmodel
 *.mlpackage
 *.torchscript
+mobileclip*.ts
 *.tflite
 *.h5
 *_saved_model/

@@ -95,6 +95,32 @@ total raised-finger counts. Press `q` to quit. If macOS selects a different came
 </details>
 
 <details open>
+<summary>Context-aware object, hand, and finger tracking</summary>
+
+Run the unified camera preview with fixed class colors, YOLOE segmentation, ByteTrack IDs, MediaPipe hand landmarks,
+finger counts, class-specific confidence thresholds, and hand/object relationships:
+
+```bash
+python -m pip install --upgrade ultralytics "mediapipe>=0.10.14,<1.0" "lap>=0.5.12"
+python vision_camera.py --source 0
+```
+
+People render in red, phones in green, remotes in orange, and headphones in purple. Phone detections must overlap a hand
+or person by default, which suppresses phone-like objects in the background. Press `p` to toggle that filter, `m` to
+toggle masks, `h` to toggle hand landmarks, `s` to save a screenshot, and `q` to quit.
+
+Use one or more normalized ignore zones for permanent background distractions:
+
+```bash
+python vision_camera.py --source 0 --ignore-zone 0.70,0.00,0.90,0.35
+```
+
+For higher accuracy at lower frame rates, use `--model yoloe-26s-seg.pt`. Lower `--imgsz` from 960 to 640 when a faster
+preview matters more than small-object sensitivity.
+
+</details>
+
+<details open>
 <summary>Inference with PyTorch Hub</summary>
 
 Use YOLOv5 via [PyTorch Hub](https://docs.ultralytics.com/yolov5/tutorials/pytorch-hub-model-loading) for inference. [Models](https://github.com/ultralytics/yolov5/tree/master/models) are automatically downloaded from the latest YOLOv5 [release](https://github.com/ultralytics/yolov5/releases).
