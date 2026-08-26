@@ -14,11 +14,12 @@ import cv2
 try:
     import mediapipe as mp
 except ImportError as error:
-    raise SystemExit("MediaPipe is required. Install it with: python -m pip install -e '.[hands]'") from error
+    raise SystemExit(
+        'MediaPipe is required. Install it with: python -m pip install "mediapipe>=0.10.14,<1.0"'
+    ) from error
 
 MODEL_URL = (
-    "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/"
-    "hand_landmarker.task"
+    "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
 )
 FINGER_JOINTS = ((1, 2, 3, 4), (5, 6, 7, 8), (9, 10, 11, 12), (13, 14, 15, 16), (17, 18, 19, 20))
 HAND_COLORS = ((255, 80, 40), (190, 50, 255))

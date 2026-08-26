@@ -85,7 +85,7 @@ Install the optional MediaPipe dependency, then start the MacBook camera preview
 downloaded once and cached locally on first use.
 
 ```bash
-python -m pip install -e '.[hands]'
+python -m pip install "mediapipe>=0.10.14,<1.0"
 python hand_track.py --source 0
 ```
 

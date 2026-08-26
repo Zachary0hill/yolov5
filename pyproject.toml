@@ -105,9 +105,6 @@ extra = [
     "albumentations>=1.0.3", # training augmentations
     "pycocotools>=2.0.6", # COCO mAP
 ]
-hands = [
-    "mediapipe>=0.10.14,<1.0",
-]
 
 [project.urls]
 "Bug Reports" = "https://github.com/ultralytics/yolov5/issues"
