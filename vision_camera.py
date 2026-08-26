@@ -87,7 +87,12 @@ def parse_opt():
         "--ignore-zone", action="append", type=parse_zone, default=[], help="normalized x1,y1,x2,y2 zone"
     )
     parser.add_argument("--show-unheld-phones", action="store_true", help="show phones away from hands or people")
-    parser.add_argument("--no-mirror", action="store_true", help="do not mirror camera input")
+    orientation = parser.add_mutually_exclusive_group()
+    orientation.add_argument("--mirror", action="store_true", help="mirror the camera like a selfie preview")
+    orientation.add_argument(
+        "--no-mirror", dest="mirror", action="store_false", help="use natural orientation (default)"
+    )
+    parser.set_defaults(mirror=False)
     parser.add_argument("--no-masks", action="store_true", help="start with segmentation masks hidden")
     parser.add_argument("--no-hands", action="store_true", help="start with hand landmarks hidden")
     parser.add_argument("--save-dir", type=Path, default=Path("runs/vision-camera"), help="screenshot directory")
@@ -116,15 +121,18 @@ def point_in_ignored_zone(point, zones, width, height):
     return any(x1 * width <= x <= x2 * width and y1 * height <= y <= y2 * height for x1, y1, x2, y2 in zones)
 
 
-def hand_observations(result, width, height):
+def hand_observations(result, width, height, mirrored):
     """Convert MediaPipe output to labeled hand observations."""
     observations = []
     for image_hand, handedness in zip(result.hand_landmarks, result.handedness):
         points = [(landmark.x * width, landmark.y * height) for landmark in image_hand]
         x_values, y_values = zip(*points)
+        label = handedness[0].category_name if handedness else "Hand"
+        if not mirrored and label in {"Left", "Right"}:
+            label = "Right" if label == "Left" else "Left"
         observations.append(
             HandObservation(
-                handedness[0].category_name if handedness else "Hand",
+                label,
                 (min(x_values), min(y_values), max(x_values), max(y_values)),
                 image_hand,
             )
@@ -300,7 +308,7 @@ def draw_hud(frame, fps, device, show_masks, show_hands, phone_filter):
         cv2.putText(frame, line, (30, 43 + index * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (245, 245, 245), 2, cv2.LINE_AA)
     cv2.putText(
         frame,
-        "q quit   m masks   h hands   p phone filter   s screenshot",
+        "q quit   f flip   m masks   h hands   p phone filter   s screenshot",
         (20, frame.shape[0] - 20),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.56,
@@ -343,6 +351,7 @@ def run(opt):
     fps, previous_time = 0.0, time.perf_counter()
     show_masks, show_hands = not opt.no_masks, not opt.no_hands
     phone_filter = not opt.show_unheld_phones
+    mirrored = opt.mirror
     window = "Vision Camera"
 
     try:
@@ -351,7 +360,7 @@ def run(opt):
                 success, frame = camera.read()
                 if not success:
                     break
-                if isinstance(source, int) and not opt.no_mirror:
+                if isinstance(source, int) and mirrored:
                     frame = cv2.flip(frame, 1)
 
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -359,7 +368,7 @@ def run(opt):
                 hand_result = hand_model.detect_for_video(
                     mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb), timestamp_ms
                 )
-                hands = hand_observations(hand_result, frame.shape[1], frame.shape[0])
+                hands = hand_observations(hand_result, frame.shape[1], frame.shape[0], mirrored)
 
                 object_result = object_model.track(
                     frame,
@@ -403,6 +412,8 @@ def run(opt):
                     show_hands = not show_hands
                 elif key == ord("p"):
                     phone_filter = not phone_filter
+                elif key == ord("f"):
+                    mirrored = not mirrored
                 elif key == ord("s"):
                     opt.save_dir.mkdir(parents=True, exist_ok=True)
                     output = opt.save_dir / f"vision-{time.strftime('%Y%m%d-%H%M%S')}.jpg"

@@ -106,8 +106,9 @@ python vision_camera.py --source 0
 ```
 
 People render in red, phones in green, remotes in orange, and headphones in purple. Phone detections must overlap a hand
-or person by default, which suppresses phone-like objects in the background. Press `p` to toggle that filter, `m` to
-toggle masks, `h` to toggle hand landmarks, `s` to save a screenshot, and `q` to quit.
+or person by default, which suppresses phone-like objects in the background. The camera opens unmirrored; press `f` to
+flip it live. Press `p` to toggle the phone filter, `m` to toggle masks, `h` to toggle hand landmarks, `s` to save a
+screenshot, and `q` to quit.
 
 Use one or more normalized ignore zones for permanent background distractions:
 
