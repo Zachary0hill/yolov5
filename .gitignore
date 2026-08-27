@@ -19,7 +19,10 @@
 *.avi
 *.data
 *.json
+!vision_camera_scenarios.json
 *.cfg
+
+vision-camera-media/
 
 storage.googleapis.com
 runs/*

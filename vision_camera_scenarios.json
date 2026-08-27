@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "configuration": {
+    "model": "yoloe-26n-seg.pt",
+    "imgsz": 960,
+    "confirm_frames": 2,
+    "max_hands": 2,
+    "mirror": false,
+    "show_unheld_phones": false,
+    "ignore_zones": []
+  },
+  "scenarios": [
+    {
+      "id": "clean-baseline",
+      "clip": "vision-camera-media/clean-baseline.mp4",
+      "tags": ["baseline", "image-quality"],
+      "enabled": false,
+      "annotations": []
+    },
+    {
+      "id": "phone-remote-ambiguity",
+      "clip": "vision-camera-media/phone-remote-ambiguity.mp4",
+      "tags": ["ambiguity", "multiple-classes"],
+      "enabled": false,
+      "annotations": []
+    },
+    {
+      "id": "crossed-hands",
+      "clip": "vision-camera-media/crossed-hands.mp4",
+      "tags": ["identity", "hands-crossing"],
+      "enabled": false,
+      "annotations": []
+    },
+    {
+      "id": "held-object-occlusion",
+      "clip": "vision-camera-media/held-object-occlusion.mp4",
+      "tags": ["occlusion", "hand-object-association"],
+      "enabled": false,
+      "annotations": []
+    },
+    {
+      "id": "fast-pickup-release",
+      "clip": "vision-camera-media/fast-pickup-release.mp4",
+      "tags": ["motion", "pickup", "release"],
+      "enabled": false,
+      "annotations": []
+    }
+  ]
+}
