@@ -214,6 +214,7 @@ def run_scenario(scenario, manifest_path, configuration, device):
     source_height = int(camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
     annotations = {item["frame"]: item for item in scenario.get("annotations", [])}
     counts, track_history, frames, durations = blank_counts(), {}, [], []
+    evaluated_annotations = set()
     process = psutil.Process()
     start_memory = process.memory_info().rss
     peak_memory = start_memory
@@ -243,11 +244,19 @@ def run_scenario(scenario, manifest_path, configuration, device):
                 frames.append({"frame": frame_index, "objects": objects, "hands": hand_states})
                 if frame_index in annotations:
                     evaluate_frame(annotations[frame_index], objects, hand_states, counts, track_history)
+                    evaluated_annotations.add(frame_index)
                 peak_memory = max(peak_memory, process.memory_info().rss)
                 frame_index += 1
                 timestamp_ms = max(timestamp_ms + 1, round(frame_index * 1000 / source_fps))
     finally:
         camera.release()
+    if not frames:
+        raise RuntimeError(f"Scenario {scenario['id']} did not produce any frames")
+    if missing_annotations := annotations.keys() - evaluated_annotations:
+        raise ValueError(
+            f"Scenario {scenario['id']} did not process annotated frames: "
+            f"{', '.join(str(frame) for frame in sorted(missing_annotations))}"
+        )
     sorted_durations = sorted(durations)
     percentile_index = min(len(sorted_durations) - 1, int(len(sorted_durations) * 0.95)) if durations else 0
     return {
