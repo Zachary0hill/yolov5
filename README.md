@@ -124,6 +124,36 @@ preview matters more than small-object sensitivity.
 
 </details>
 
+<details>
+<summary>Recorded vision-camera benchmark</summary>
+
+The headless benchmark runs the same object and hand inference path as the live preview. Record clips into the ignored
+`vision-camera-media/` directory, then add frame annotations and enable each scenario in
+`vision_camera_scenarios.json`. An annotated frame uses original pixel coordinates:
+
+```json
+{
+  "frame": 42,
+  "hands": [{"id": "right-1", "label": "Right", "box": [420, 180, 690, 650], "raised_fingers": 5}],
+  "objects": [
+    {"id": "phone-1", "name": "cell phone", "box": [510, 330, 640, 570], "held_by": "right-1"}
+  ]
+}
+```
+
+Validate the manifest without loading either model, then write predictions, per-scenario metrics, aggregate metrics,
+timings, memory growth, source settings, and application commit to an ignored result file:
+
+```bash
+python vision_camera_benchmark.py --validate-only
+python vision_camera_benchmark.py --output runs/vision-camera-benchmark/baseline.json
+```
+
+Precision and recall use class-aware box matching at IoU 0.5. Metrics without annotations remain `null` instead of
+being reported as a passing zero-error result. Event metrics remain explicitly unavailable until event states exist.
+
+</details>
+
 <details open>
 <summary>Inference with PyTorch Hub</summary>
 

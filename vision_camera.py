@@ -60,6 +60,74 @@ class TrackState:
     last_frame: int
 
 
+class PerceptionPipeline:
+    """Shared object and hand inference used by live and recorded sources."""
+
+    def __init__(
+        self,
+        model,
+        imgsz,
+        device,
+        confirm_frames,
+        ignore_zones=(),
+        show_unheld_phones=False,
+        max_hands=2,
+    ):
+        if confirm_frames < 1:
+            raise ValueError("confirm_frames must be at least 1")
+        if max_hands < 1:
+            raise ValueError("max_hands must be at least 1")
+        self.imgsz = imgsz
+        self.device = device
+        self.confirm_frames = confirm_frames
+        self.ignore_zones = ignore_zones
+        self.show_unheld_phones = show_unheld_phones
+        self.states = {}
+        self.object_model = YOLOE(model)
+        self.object_model.set_classes(list(PROMPTS))
+        hand_options = mp.tasks.vision.HandLandmarkerOptions(
+            base_options=mp.tasks.BaseOptions(model_asset_path=str(model_path())),
+            running_mode=mp.tasks.vision.RunningMode.VIDEO,
+            num_hands=max_hands,
+            min_hand_detection_confidence=0.45,
+            min_hand_presence_confidence=0.45,
+            min_tracking_confidence=0.45,
+        )
+        self.hand_model = mp.tasks.vision.HandLandmarker.create_from_options(hand_options)
+
+    def close(self):
+        """Release the MediaPipe task."""
+        self.hand_model.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def process(self, frame, frame_index, timestamp_ms, mirrored=False):
+        """Return context-filtered detections and hands for one frame."""
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        hand_result = self.hand_model.detect_for_video(
+            mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb), timestamp_ms
+        )
+        hands = hand_observations(hand_result, frame.shape[1], frame.shape[0], mirrored)
+        object_result = self.object_model.track(
+            frame,
+            persist=True,
+            tracker="bytetrack.yaml",
+            conf=0.05,
+            iou=0.55,
+            imgsz=self.imgsz,
+            device=self.device,
+            max_det=40,
+            verbose=False,
+        )[0]
+        detections = extract_detections(object_result, frame.shape, self.ignore_zones)
+        detections = confirmed_detections(detections, self.states, frame_index, self.confirm_frames)
+        return apply_context(detections, hands, self.show_unheld_phones), hands
+
+
 def parse_zone(value):
     """Parse a normalized x1,y1,x2,y2 ignore zone."""
     try:
@@ -320,21 +388,17 @@ def draw_hud(frame, fps, device, show_masks, show_hands, phone_filter):
 
 def run(opt):
     """Run the unified camera loop."""
-    if opt.confirm_frames < 1:
-        raise ValueError("--confirm-frames must be at least 1")
     device = opt.device or ("mps" if torch.backends.mps.is_available() else "cpu")
     source = int(opt.source) if str(opt.source).isdigit() else opt.source
 
     print(f"Loading {opt.model} on {device} with classes: {', '.join(PROMPTS)}")
-    object_model = YOLOE(opt.model)
-    object_model.set_classes(list(PROMPTS))
-    hand_options = mp.tasks.vision.HandLandmarkerOptions(
-        base_options=mp.tasks.BaseOptions(model_asset_path=str(model_path())),
-        running_mode=mp.tasks.vision.RunningMode.VIDEO,
-        num_hands=2,
-        min_hand_detection_confidence=0.45,
-        min_hand_presence_confidence=0.45,
-        min_tracking_confidence=0.45,
+    pipeline = PerceptionPipeline(
+        opt.model,
+        opt.imgsz,
+        device,
+        opt.confirm_frames,
+        opt.ignore_zone,
+        opt.show_unheld_phones,
     )
 
     camera = cv2.VideoCapture(source)
@@ -343,9 +407,9 @@ def run(opt):
         camera.set(cv2.CAP_PROP_FRAME_HEIGHT, opt.height)
     if not camera.isOpened():
         camera.release()
+        pipeline.close()
         raise RuntimeError(f"Could not open source {source}. Check camera permissions or try --source 1.")
 
-    states = {}
     frame_index = 0
     timestamp_ms = 0
     fps, previous_time = 0.0, time.perf_counter()
@@ -355,7 +419,7 @@ def run(opt):
     window = "Vision Camera"
 
     try:
-        with mp.tasks.vision.HandLandmarker.create_from_options(hand_options) as hand_model:
+        with pipeline:
             while True:
                 success, frame = camera.read()
                 if not success:
@@ -363,27 +427,9 @@ def run(opt):
                 if isinstance(source, int) and mirrored:
                     frame = cv2.flip(frame, 1)
 
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 timestamp_ms = max(timestamp_ms + 1, time.monotonic_ns() // 1_000_000)
-                hand_result = hand_model.detect_for_video(
-                    mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb), timestamp_ms
-                )
-                hands = hand_observations(hand_result, frame.shape[1], frame.shape[0], mirrored)
-
-                object_result = object_model.track(
-                    frame,
-                    persist=True,
-                    tracker="bytetrack.yaml",
-                    conf=0.05,
-                    iou=0.55,
-                    imgsz=opt.imgsz,
-                    device=device,
-                    max_det=40,
-                    verbose=False,
-                )[0]
-                detections = extract_detections(object_result, frame.shape, opt.ignore_zone)
-                detections = confirmed_detections(detections, states, frame_index, opt.confirm_frames)
-                detections = apply_context(detections, hands, not phone_filter)
+                pipeline.show_unheld_phones = not phone_filter
+                detections, hands = pipeline.process(frame, frame_index, timestamp_ms, mirrored)
 
                 draw_detections(frame, detections, show_masks)
                 if show_hands:
